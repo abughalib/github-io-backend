@@ -18,7 +18,7 @@ async fn index(_req: HttpRequest)->HttpResponse{
 }
 
 async fn message(info: web::Json<Info>)->HttpResponse{
-  println!("model: {:?}", &info);
+  // println!("model: {:?}", &info);
   HttpResponse::Ok().json(info.0)
 }
 
@@ -107,6 +107,38 @@ mod tests{
 
     Ok(())
     
+  }
+
+  #[actix_rt::test]
+  async fn test_message()->Result<(), Error>{
+    let mut app = test::init_service(
+      App::new()
+      .service(web::resource("/message").route(web::post().to(message)))
+    ).await;
+
+    let req = test::TestRequest::post()
+      .uri("/message")
+      .set_json(&Info{
+        name: "Abu Ghalib".to_owned(),
+        email: "abugh@protonmail.com".to_owned(),
+        message: "msg".to_owned(),
+      })
+      .to_request();
+
+      let resp = app.call(req).await.unwrap();
+
+      assert_eq!(resp.status(), http::StatusCode::OK);
+
+      let resp_body = match resp.response().body().as_ref(){
+        Some(actix_web::body::Body::Bytes(bytes)) => bytes,
+        _ => panic!("Response Error"),
+      };
+
+      assert_eq!(resp_body, r##"{"name":"Abu Ghalib","email":"abugh@protonmail.com","message":"msg"}"##);
+
+      println!("{:?}", resp_body);
+
+    Ok(())
   }
 
 }
