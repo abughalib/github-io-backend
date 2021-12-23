@@ -17,15 +17,11 @@ async fn index(_req: HttpRequest)->HttpResponse{
   HttpResponse::Ok().body("Nothing to see here!")
 }
 
-async fn message(info: web::Json<Info>)->HttpResponse{
-  // println!("model: {:?}", &info);
-  HttpResponse::Ok().json(info.0)
+async fn message(_info: web::Json<Info>)->HttpResponse{
+  HttpResponse::Ok().body("Message Sent")
 }
 
-async fn extract_item(info: web::Json<Info>, req: HttpRequest)->HttpResponse{
-  println!("Request: {:?}", req);
-  println!("Model: {:?}", info);
-
+async fn extract_item(info: web::Json<Info>, _req: HttpRequest)->HttpResponse{
   HttpResponse::Ok().json(info.0)
 }
 
@@ -134,11 +130,10 @@ mod tests{
         _ => panic!("Response Error"),
       };
 
-      assert_eq!(resp_body, r##"{"name":"Abu Ghalib","email":"abugh@protonmail.com","message":"msg"}"##);
-
+      //assert_eq!(resp_body, r##"{"name":"Abu Ghalib","email":"abugh@protonmail.com","message":"msg"}"##);
+      assert_eq!(resp_body, r##"Message Sent"##);
       println!("{:?}", resp_body);
 
     Ok(())
   }
-
 }
