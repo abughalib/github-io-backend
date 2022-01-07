@@ -17,22 +17,22 @@ pub fn establish_connection() -> SqliteConnection{
   .expect(&format!("Error Connecting to {}", database_url))
 }
 
-pub fn post_message(new_message: NewMessage) -> Result<(), Error>{
+pub fn post_message(new_message: NewMessage) -> Result<usize, Error>{
   let conn = establish_connection();
 
-  let _result = diesel::insert_into(messages::table)
+  let result = diesel::insert_into(messages::table)
     .values(new_message)
     .execute(&conn)?;
-  Ok(())
+  Ok(result)
 }
 
-pub async fn insert_message_from_web(info: models::Message){
+pub async fn insert_message_from_web(info: models::Message)-> Result<usize, Error>{
   let new_message: NewMessage = NewMessage{
     messenger_name: info.name,
     messenger_email: info.email,
     message_description: info.description
   };
-  post_message(new_message).unwrap();
+  post_message(new_message)
 }
 
 pub async fn get_message_using_email(sender: &String)->Vec<QueryMessage>{

@@ -20,9 +20,17 @@ async fn index(_req: HttpRequest)->HttpResponse{
 
 async fn message(info: web::Json<models::Message>)->HttpResponse{
 
-  database::insert_message_from_web(info.0).await;
+  let result = database::insert_message_from_web(info.0).await;
 
-  HttpResponse::Ok().body("Message Sent")
+  match result{
+    Ok(_)=>{
+      HttpResponse::Ok().body("Message Sent")
+    },
+    Err(_)=>{
+      // Later to Log Errors
+      HttpResponse::BadRequest().body("Unknow Error!")
+    }
+  }
 }
 
 async fn _get_message_using_email(info: web::Json<models::QueryUsingEmail>)-> Result<impl Responder>{
@@ -60,7 +68,9 @@ async fn main()->std::io::Result<()>{
 
 #[cfg(test)]
 mod tests{
-  use super::*;
+  use crate::models::NewMessage;
+
+use super::*;
   use actix_web::dev::Service;
   use actix_web::{http, test, App};
 
@@ -88,7 +98,33 @@ mod tests{
   }
 
   #[actix_rt::test]
+  async fn test_database(){
+    let new_msg = NewMessage{
+      messenger_name: String::from("dafklasdjlfk"),
+      messenger_email: String::from("dj2131sdfa@gmail.com"),
+      message_description: String::from(
+        "Testing..."
+      )
+    };
+    let id_index: i32 = database::post_message(new_msg).unwrap() as i32;
+    use std::time;
+    use std::thread;
+
+    let sleep_duration = time::Duration::from_millis(500);
+    println!("Sleeping Thread for Database");
+    thread::sleep(sleep_duration);
+    assert!(database::delete_message(id_index).is_ok())
+  }
+
+  #[actix_rt::test]
   async fn test_message()->Result<(), actix_web::Error>{
+
+    use std::time;
+    use std::thread;
+    let sleep_duration = time::Duration::from_millis(500);
+    thread::sleep(sleep_duration);
+    println!("Sleeping Thread for Database");
+
     let mut app = test::init_service(
       App::new()
       .service(web::resource("/message")
@@ -98,24 +134,33 @@ mod tests{
     let req = test::TestRequest::post()
       .uri("/message")
       .set_json(&models::Message{
-        name: "Abu Ghalib".to_owned(),
+        name: "Abu".to_owned(),
         email: "abugh@protonmail.com".to_owned(),
         description: "msg".to_owned(),
       })
       .to_request();
 
-      let resp = app.call(req).await.unwrap();
+    let resp = app.call(req).await.unwrap();
 
-      assert_eq!(resp.status(), http::StatusCode::OK);
+    assert_eq!(resp.status(), http::StatusCode::OK);
 
-      let resp_body = match resp.response().body().as_ref(){
-        Some(actix_web::body::Body::Bytes(bytes)) => bytes,
-        _ => panic!("Response Error"),
-      };
+    let resp_body = match resp.response().body().as_ref(){
+      Some(actix_web::body::Body::Bytes(bytes)) => bytes,
+      _ => panic!("Response Error"),
+    };
 
-      //assert_eq!(resp_body, r##"{"name":"Abu Ghalib","email":"abugh@protonmail.com","message":"msg"}"##);
-      assert_eq!(resp_body, r##"Message Sent"##);
-      println!("{:?}", resp_body);
+    //assert_eq!(resp_body, r##"{"name":"Abu Ghalib","email":"abugh@protonmail.com","message":"msg"}"##);
+    assert_eq!(resp_body, r##"Message Sent"##);
+    println!("{:?}", resp_body);
+
+    let msgs: Vec<QueryMessage> = database::get_message_using_email(
+      &String::from("abugh@protonmail.com")
+    ).await;
+
+    for idx in &msgs{
+      assert!(database::delete_message(idx.id).is_ok());
+      thread::sleep(sleep_duration)
+    }
 
     Ok(())
   }
