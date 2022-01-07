@@ -1,77 +1,59 @@
-use actix_web::{
-  error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, get
-};
-use futures::StreamExt;
-use json::JsonValue;
-use serde::{Deserialize, Serialize};
+pub mod database;
+pub mod schema;
+pub mod models;
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Info{
-  name: String,
-  email: String,
-  message: String,
-}
+use actix_web::{
+  middleware, web, App, HttpRequest, Result, Responder,
+  http::header, HttpResponse, HttpServer, get
+};
+use actix_cors::Cors;
+use models::QueryMessage;
+
+#[macro_use]
+extern crate diesel;
+extern crate serde;
 
 #[get("/")]
 async fn index(_req: HttpRequest)->HttpResponse{
   HttpResponse::Ok().body("Nothing to see here!")
 }
 
-async fn message(_info: web::Json<Info>)->HttpResponse{
+async fn message(info: web::Json<models::Message>)->HttpResponse{
+
+  database::insert_message_from_web(info.0).await;
+
   HttpResponse::Ok().body("Message Sent")
 }
 
-async fn extract_item(info: web::Json<Info>, _req: HttpRequest)->HttpResponse{
-  HttpResponse::Ok().json(info.0)
-}
-
-const MAX_SIZE: usize = 262_144;
-
-async fn message_parse(mut payload: web::Payload)->Result<HttpResponse, Error>{
-  let mut body = web::BytesMut::new();
-  while let Some(chunk) = payload.next().await{
-    let chunk = chunk?;
-    if (body.len() + chunk.len()) > MAX_SIZE{
-      return Err(error::ErrorBadRequest("OverFlow payload size"));
-    }
-    body.extend_from_slice(&chunk);
-  }
-
-  let obj = serde_json::from_slice::<Info>(&body)?;
-  Ok(HttpResponse::Ok().json(obj))
-}
-
-async fn message_parse_json(body: web::Bytes)->Result<HttpResponse, Error>{
-  let resp = json::parse(std::str::from_utf8(&body).unwrap());
-  let injson: JsonValue = match resp{
-    Ok(v)=>v,
-    Err(e) =>json::object!{"err" => e.to_string()},
-  };
-  Ok(HttpResponse::Ok()
-    .content_type("application/json")
-    .body(injson.dump()))
+async fn _get_message_using_email(info: web::Json<models::QueryUsingEmail>)-> Result<impl Responder>{
+  let msgs: Vec<QueryMessage> = database::get_message_using_email(&info.email).await;
+  Ok(web::Json(msgs))
 }
 
 #[actix_web::main]
 async fn main()->std::io::Result<()>{
   std::env::set_var("RUST_LOG", "actix_web=info");
   env_logger::init();
+
+  let port: u16 = 8088;
   
   HttpServer::new(|| {
+    let cors = Cors::default()
+    .allow_any_origin()
+    .allowed_methods(vec!["GET", "POST"])
+    .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+    .allowed_header(header::CONTENT_TYPE)
+    .max_age(3600);
+
     App::new()
       .wrap(middleware::Logger::default())
+      .wrap(cors)
       .data(web::JsonConfig::default().limit(4096))
       .service(index)
-      .service(web::resource("/message").route(web::post().to(message)))
-      .service(
-        web::resource("/message/extract")
-          .data(web::JsonConfig::default().limit(1024))
-          .route(web::post().to(extract_item)),
-      )
-      .service(web::resource("/message/parse").route(web::post().to(message_parse)))
-      .service(web::resource("/message/parse_json").route(web::post().to(message_parse_json)))
+      .service(web::resource("/message")
+      .route(web::post().to(message)))
   })
-  .bind("127.0.0.1:8088")?
+  .bind(("0.0.0.0", port))?
   .run()
   .await
 }
@@ -83,7 +65,7 @@ mod tests{
   use actix_web::{http, test, App};
 
   #[actix_rt::test]
-  async fn test_index()->Result<(), Error>{
+  async fn test_index()->Result<(), actix_web::Error>{
     let mut app = test::init_service(
       App::new().service(index),
     )
@@ -106,18 +88,19 @@ mod tests{
   }
 
   #[actix_rt::test]
-  async fn test_message()->Result<(), Error>{
+  async fn test_message()->Result<(), actix_web::Error>{
     let mut app = test::init_service(
       App::new()
-      .service(web::resource("/message").route(web::post().to(message)))
+      .service(web::resource("/message")
+      .route(web::post().to(message)))
     ).await;
 
     let req = test::TestRequest::post()
       .uri("/message")
-      .set_json(&Info{
+      .set_json(&models::Message{
         name: "Abu Ghalib".to_owned(),
         email: "abugh@protonmail.com".to_owned(),
-        message: "msg".to_owned(),
+        description: "msg".to_owned(),
       })
       .to_request();
 
