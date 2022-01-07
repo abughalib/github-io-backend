@@ -1,5 +1,5 @@
 # Github IO Messaging Receiver API
-
+![](https://app.travis-ci.com/abughalib/github-io-backend.svg?branch=master)
 ## Setup
 * Configure .env and define DATABASE_URL accordingly or use Postgresql DB.
 
