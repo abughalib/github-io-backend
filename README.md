@@ -1,12 +1,22 @@
 # Github IO Messaging Receiver API
 
 ## Setup
-* Create .env and define DATABASE_URL.
+* Configure .env and define DATABASE_URL accordingly or use Postgresql DB.
+
+## Test
+Test if everything is configured properly.
 ```bash
-echo "DATABASE_URL=mongodb+srv://<username>:<password>@<cluster-url>" >> .env
+cargo test --verbose
 ```
 
-## Build & Run
+## Deploy on Heroku.
+Use emk's Rust.
 ```bash
-cargo run
+git clone https://github.com/abughalib/github-io-backend
+heroku create --buildpack emk/rust
+heroku buildbpacks:set emk/rust
+
+git add .
+git commit -m "init"
+git push heroku master
 ```
