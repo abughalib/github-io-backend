@@ -3,6 +3,5 @@ sudo: required
 rust:
   - stable
 script:
-  - |
-  cargo build --verbose &&
-  cargo test --verbose
+  - cargo build --verbose
+  - cargo test --verbose
