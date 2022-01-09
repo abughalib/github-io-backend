@@ -4,6 +4,6 @@ rust:
   - stable
 services:
   - docker
-before_script: pip install docker-compose
+before_script: curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 script:
   - docker-compose run app sh -c "cargo build && cargo test"
