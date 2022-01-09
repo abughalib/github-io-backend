@@ -14,7 +14,7 @@ Use emk's Rust.
 ```bash
 git clone https://github.com/abughalib/github-io-backend
 heroku create --buildpack emk/rust
-heroku buildbpacks:set emk/rust
+heroku buildpacks:set emk/rust
 
 git add .
 git commit -m "init"
