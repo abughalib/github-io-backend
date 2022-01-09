@@ -2,8 +2,8 @@ language: rust
 sudo: required
 rust:
   - stable
+services:
+  - docker
+before_script: pip install docker-compose
 script:
-  - cargo install diesel_cli --no-default-features --features sqlite
-  - diesel migration run
-  - cargo build --verbose
-  - cargo test --verbose
+  - docker-compose run app sh -c "cargo build && cargo test"
