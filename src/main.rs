@@ -56,7 +56,7 @@ async fn main()->std::io::Result<()>{
     App::new()
       .wrap(middleware::Logger::default())
       .wrap(cors)
-      .data(web::JsonConfig::default().limit(4096))
+      .app_data(web::JsonConfig::default().limit(4096))
       .service(index)
       .service(web::resource("/message")
       .route(web::post().to(message)))
