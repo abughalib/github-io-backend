@@ -71,27 +71,18 @@ mod tests{
   use crate::models::NewMessage;
 
 use super::*;
-  use actix_web::dev::Service;
   use actix_web::{http, test, App};
 
   #[actix_rt::test]
   async fn test_index()->Result<(), actix_web::Error>{
-    let mut app = test::init_service(
+    let app = test::init_service(
       App::new().service(index),
     )
     .await;
 
     let req = test::TestRequest::get().to_request();
-    let res = app.call(req).await.unwrap();
-
+    let res = test::call_service(&app, req).await;
     assert_eq!(res.status(), http::StatusCode::OK);
-    
-    let res_body = match res.response().body().as_ref(){
-      Some(actix_web::body::Body::Bytes(bytes))=>bytes,
-      _=>panic!("Response Error"),
-    };
-
-    assert_eq!(res_body, "Nothing to see here!");
 
     Ok(())
     
@@ -125,7 +116,7 @@ use super::*;
     thread::sleep(sleep_duration);
     println!("Sleeping Thread for Database");
 
-    let mut app = test::init_service(
+    let app = test::init_service(
       App::new()
       .service(web::resource("/message")
       .route(web::post().to(message)))
@@ -140,18 +131,10 @@ use super::*;
       })
       .to_request();
 
-    let resp = app.call(req).await.unwrap();
-
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), http::StatusCode::OK);
 
-    let resp_body = match resp.response().body().as_ref(){
-      Some(actix_web::body::Body::Bytes(bytes)) => bytes,
-      _ => panic!("Response Error"),
-    };
-
     //assert_eq!(resp_body, r##"{"name":"Abu Ghalib","email":"abugh@protonmail.com","message":"msg"}"##);
-    assert_eq!(resp_body, r##"Message Sent"##);
-    println!("{:?}", resp_body);
 
     let msgs: Vec<QueryMessage> = database::get_message_using_email(
       &String::from("abugh@protonmail.com")
