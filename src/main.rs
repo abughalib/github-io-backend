@@ -58,39 +58,23 @@ async fn _get_message_using_email(info: web::Json<models::QueryUsingEmail>)-> Re
 async fn main()->std::io::Result<()>{
   std::env::set_var("RUST_LOG", "actix_web=info");
   env_logger::init();
-
-  let pattern = std::env::args().nth(1)
-    .expect("mention database argument as sqlite or mongodb");
-
-  let port: u16 = 8088;
   
   HttpServer::new(move || {
     let cors = Cors::default()
-    .allow_any_origin()
+    .allowed_origin("")
     .allowed_methods(vec!["GET", "POST"])
     .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
     .allowed_header(header::CONTENT_TYPE)
     .max_age(3600);
-
-    if pattern == "mongodb" {
-      App::new()
-      .wrap(middleware::Logger::default())
-      .wrap(cors)
-      .app_data(web::JsonConfig::default().limit(4096))
-      .service(index)
-      .service(web::resource("/message")
-      .route(web::post().to(message_mongoasync)))
-    }else {
-      App::new()
-      .wrap(middleware::Logger::default())
-      .wrap(cors)
-      .app_data(web::JsonConfig::default().limit(4096))
-      .service(index)
-      .service(web::resource("/message")
-      .route(web::post().to(message)))
-    }
+    App::new()
+    .wrap(middleware::Logger::default())
+    .wrap(cors)
+    .app_data(web::JsonConfig::default().limit(4096))
+    .service(index)
+    .service(web::resource("/message")
+    .route(web::post().to(message_mongoasync)))
   })
-  .bind(("0.0.0.0", port))?
+  .bind(("0.0.0.0", 8080))?
   .run()
   .await
 }
