@@ -6,7 +6,10 @@ use super::schema::*;
 use diesel::sqlite::SqliteConnection;
 use dotenv::dotenv;
 use diesel::result::Error;
+use mongodb::{Client, Collection};
+use mongodb::options::ClientOptions;
 use std::env;
+use mongodb::error;
 
 pub fn establish_connection() -> SqliteConnection{
   dotenv().ok();
@@ -24,6 +27,21 @@ pub fn post_message(new_message: NewMessage) -> Result<usize, Error>{
     .values(new_message)
     .execute(&conn)?;
   Ok(result)
+}
+
+pub async fn establish_connection_mongodb()-> Result<Collection<models::Message>, error::Error> {
+  let mongodb_url = env::var("MONGODB_URL")
+    .expect("MONGODB_URL must be set");
+  
+  let mut client_options = ClientOptions::parse(mongodb_url).await?;
+  client_options.app_name = Some("github.io.backend".to_string());
+
+  let client = Client::with_options(client_options)?;
+
+  let collections = client.database("github-io")
+    .collection::<models::Message>("messages");
+
+  return Ok(collections);
 }
 
 pub async fn insert_message_from_web(info: models::Message)-> Result<usize, Error>{

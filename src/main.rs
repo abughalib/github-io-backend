@@ -21,6 +21,22 @@ async fn index(_req: HttpRequest)->HttpResponse{
 async fn message(info: web::Json<models::Message>)->HttpResponse{
 
   let result = database::insert_message_from_web(info.0).await;
+  match result{
+    Ok(_)=>{
+      HttpResponse::Ok().body("Message Sent")
+    },
+    Err(_)=>{
+      // Later to Log Errors
+      HttpResponse::BadRequest().body("Unknow Error!")
+    }
+  }
+}
+
+async fn message_mongoasync(info: web::Json<models::Message>)->HttpResponse{
+  let collections = database::establish_connection_mongodb().await
+    .expect("Failed to Connect to Mongodb");
+
+  let result = collections.insert_one(info.0, None).await;
 
   match result{
     Ok(_)=>{
@@ -43,9 +59,12 @@ async fn main()->std::io::Result<()>{
   std::env::set_var("RUST_LOG", "actix_web=info");
   env_logger::init();
 
+  let pattern = std::env::args().nth(1)
+    .expect("mention database argument as sqlite or mongodb");
+
   let port: u16 = 8088;
   
-  HttpServer::new(|| {
+  HttpServer::new(move || {
     let cors = Cors::default()
     .allow_any_origin()
     .allowed_methods(vec!["GET", "POST"])
@@ -53,13 +72,23 @@ async fn main()->std::io::Result<()>{
     .allowed_header(header::CONTENT_TYPE)
     .max_age(3600);
 
-    App::new()
+    if pattern == "mongodb" {
+      App::new()
+      .wrap(middleware::Logger::default())
+      .wrap(cors)
+      .app_data(web::JsonConfig::default().limit(4096))
+      .service(index)
+      .service(web::resource("/message")
+      .route(web::post().to(message_mongoasync)))
+    }else {
+      App::new()
       .wrap(middleware::Logger::default())
       .wrap(cors)
       .app_data(web::JsonConfig::default().limit(4096))
       .service(index)
       .service(web::resource("/message")
       .route(web::post().to(message)))
+    }
   })
   .bind(("0.0.0.0", port))?
   .run()
