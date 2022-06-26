@@ -8,9 +8,20 @@ on:
       - master
 
 jobs:
+  compile:
+    name: Compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - name: Setup | Rust
+        uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
+      - name: Build | Compile
+        run: cargo check
   test:
     name: Test
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         os:
@@ -32,10 +43,10 @@ jobs:
           rust-version: ${{ matrix.rust }}
       - name: Build | Compile
         run: cargo test
-
   build:
-    name: Windows release
+    name: Release
     runs-on: windows-latest
+    needs: [compile]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Rust
@@ -45,5 +56,3 @@ jobs:
       - name: Build
         run: |
           cargo build --release
-
-      
