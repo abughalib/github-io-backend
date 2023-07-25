@@ -15,7 +15,7 @@ pub struct QueryUsingEmail{
 }
 
 #[derive(Insertable)]
-#[table_name = "messages"]
+#[diesel(table_name = messages)]
 pub struct NewMessage{
   pub messenger_name: String,
   pub messenger_email: String,
@@ -23,7 +23,7 @@ pub struct NewMessage{
 }
 
 #[derive(Queryable, QueryableByName, Serialize)]
-#[table_name = "messages"]
+#[diesel(table_name = messages)]
 pub struct QueryMessage{
   pub id: i32,
   pub messenger_name: String,

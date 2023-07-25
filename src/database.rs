@@ -21,11 +21,11 @@ pub fn establish_connection() -> SqliteConnection{
 }
 
 pub fn post_message(new_message: NewMessage) -> Result<usize, Error>{
-  let conn = establish_connection();
+  let mut conn = establish_connection();
 
   let result = diesel::insert_into(messages::table)
     .values(new_message)
-    .execute(&conn)?;
+    .execute(&mut conn)?;
   Ok(result)
 }
 
@@ -54,25 +54,25 @@ pub async fn insert_message_from_web(info: models::Message)-> Result<usize, Erro
 }
 
 pub async fn get_message_using_email(sender: &String)->Vec<QueryMessage>{
-  let conn = establish_connection();
+  let mut conn = establish_connection();
 
   use super::schema::messages::dsl::*;
 
   let result = messages
     .filter(messenger_email.eq(sender))
-    .load::<QueryMessage>(&conn).unwrap();
+    .load::<QueryMessage>(&mut conn).unwrap();
   
   return result;
 }
 
 pub fn delete_message(msg_id: i32) -> Result<(), Error>{
-  let conn = establish_connection();
+  let mut conn = establish_connection();
 
   use super::schema::messages::dsl::*;
 
   match  diesel::delete(
     messages.filter(id.eq(msg_id)))
-    .execute(&conn){
+    .execute(&mut conn){
       Ok(_) =>Ok(()),
       Err(e) =>{
         Err(e)
