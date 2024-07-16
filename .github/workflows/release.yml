@@ -1,54 +1,15 @@
-name: Release
+name: Docker Build
+
 on:
   push:
-    branches:
-      - master
+    branches: [ "master" ]
   pull_request:
-    branches:
-      - master
+    branches: [ "master" ]
 
 jobs:
-  compile:
-    name: Compile
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup | Checkout
-        uses: actions/checkout@v2
-      - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
-        with:
-          rust-version: stable
-      - name: Build | Compile
-        run: cargo check
-  test:
-    name: Test
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-        rust:
-          - stable
-    runs-on: ${{ matrix.os }}
-    needs: [compile]
-    steps:
-      - name: Setup | Checkout
-        uses: actions/checkout@v2
-      - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
-        with:
-          rust-version: ${{ matrix.rust }}
-      - name: Build | Compile
-        run: cargo test
-  build:
-    name: Release
-    runs-on: windows-latest
-    needs: [compile]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Rust
-        uses: ATiltedTree/setup-rust@v1
-        with:
-          rust-version: stable
-      - name: Build
-        run: |
-          cargo build --release
+    - uses: actions/checkout@v4
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
